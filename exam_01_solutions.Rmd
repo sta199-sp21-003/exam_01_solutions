@@ -1,0 +1,126 @@
+---
+title: "Exam 01 solutions"
+subtitle: "STA 199, Spring 2021, Duke University"
+author: ""
+output: pdf_document
+---
+
+# Packages
+
+```{r load-packages, message = FALSE, warning = FALSE}
+library(tidyverse) 
+library(scales)
+``` 
+
+# Data
+
+```{r read-in-data, message = FALSE}
+cas <- read_rds("data/canada_survey.rds")
+```
+
+# Tasks
+
+## Task 1
+
+```{r}
+cas <- cas %>% 
+  filter(energy_expense > 0, household_income > 0)
+```
+
+```{r}
+cas <- cas %>% 
+  mutate(marital_status = factor(marital_status))
+```
+
+## Task 2
+
+```{r}
+cas <- cas %>% 
+  mutate(heat_equip = case_when(
+    heat_equip == 1 ~ "steam",
+    heat_equip == 2 ~ "forced air",
+    heat_equip == 3 ~ "stove",
+    heat_equip == 4 ~ "electric heating"
+  ))
+```
+
+```{r}
+cas <- cas %>% 
+  mutate(heat_fuel = case_when(
+    heat_fuel == 1 ~ "oil",
+    heat_fuel == 2 ~ "gas",
+    heat_fuel == 3 ~ "electricity",
+    heat_fuel == 4 ~ "other"
+  ))
+```
+
+## Task 3
+
+```{r}
+cas %>% 
+  group_by(heat_equip, heat_fuel) %>% 
+  summarise(mean_energy_exp   = mean(energy_expense),
+            median_energy_exp = median(energy_expense),
+            sd_energy_exp     = sd(energy_expense))
+```
+
+- Forced air w/ oil has highest mean energy expense
+- Steam w/ other has the highest sd energy expense
+- Electric heating only takes two fuels
+
+## Task 4
+
+```{r}
+cas %>% 
+  mutate(heat_equip = str_to_title(heat_equip),
+         heat_fuel  = str_to_title(heat_fuel)) %>% 
+  ggplot(aes(x = heat_fuel, y = energy_expense)) +
+  geom_boxplot() +
+  scale_y_continuous(labels = label_dollar()) +
+  facet_wrap(~ heat_equip, nrow = 2) +
+  labs(x = "Heating fuel type", y = "Energy expense",
+       title = "Facets by heating equipment type") +
+  theme_minimal(base_size = 12)
+```
+
+## Task 5
+
+```{r}
+cas %>% 
+  mutate(energy_prop = energy_expense / household_income) %>% 
+  arrange(desc(energy_prop)) %>% 
+  slice(1, n()) %>% 
+  glimpse()
+```
+
+## Task 6
+
+```{r message=FALSE}
+cas %>% 
+  mutate(eepr = energy_expense / rooms) %>% 
+  group_by(year, province) %>% 
+  summarise(median_energy_expense_per_room = median(eepr)) %>% 
+  arrange(median_energy_expense_per_room) %>% 
+  slice(1) %>% 
+  ungroup()
+```
+
+## Task 7
+
+```{r fig.width=7, fig.height=6, message=FALSE}
+cas %>% 
+  mutate(energy_prop = energy_expense / household_income,
+         vulnerable  = if_else(energy_prop > 0.05, "vulnerable", "not")) %>%
+  group_by(education, age) %>%
+  summarize(prop_vulnerable = mean(vulnerable == "vulnerable")) %>%
+  ungroup() %>%
+  ggplot(aes(x = education, y = age, fill = prop_vulnerable)) + 
+  geom_raster() + 
+  scale_fill_gradient(low = "white", high = "red") +
+  labs(x = "Education", y = "Age", fill = "Proportion\nenergy\nvulnerable") +
+  theme_bw()
+```
+
+## Task 8
+
+Answers will vary.
